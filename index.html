@@ -203,18 +203,15 @@
       }
 
       .station-card {
-        background: var(--light-blue);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 1.5rem;
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1rem;
         margin-bottom: 1rem;
-        transition: all 0.3s;
-        position: relative;
-        overflow: hidden;
-        cursor: pointer;
+        border: 1px solid var(--border-color);
+        transition: box-shadow 0.3s, border-color 0.3s;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 1rem;
       }
 
       .station-card-header {
@@ -224,10 +221,17 @@
         gap: 0.5rem;
       }
 
+      .station-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        flex-grow: 1;
+      }
+
       .company-name {
         font-weight: 600;
         color: var(--primary-blue);
-        font-size: 18px;
+        font-size: 16px;
         margin-bottom: 4px;
         display: flex;
         align-items: center;
@@ -254,8 +258,8 @@
         background: var(--primary-blue);
         color: #fff;
         font-weight: 700;
-        font-size: 18px;
-        padding: 10px 16px;
+        font-size: 16px;
+        padding: 8px 12px;
         border-radius: 8px;
         min-width: 28px;
         text-align: center;
@@ -267,6 +271,7 @@
         flex-wrap: wrap;
         gap: 0.5rem;
         margin-top: 0.5rem;
+        margin-right: 0;
       }
 
       .tag {
@@ -274,10 +279,10 @@
         color: var(--primary-blue);
         padding: 5px 12px;
         border-radius: 8px;
-        font-size: 13px;
-        margin-right: 8px;
+        font-size: 12px;
         font-weight: 500;
         border: 1px solid var(--border-color);
+        margin-right: 0;
       }
 
       .station-card:hover {
@@ -531,38 +536,21 @@
         return companyMap;
       }
 
-      function createGroupedStationCard(companyName, stationNames, index) {
-        const stationNumber = String(stationNames.length).padStart(2, "0");
-        const progressPercentage = Math.min(
-          (stationNames.length / 20) * 100,
-          100
-        );
-        const tags = stationNames
-          .slice(0, 8) // Limit visible tags for better UI
+      function createGroupedItemCard(companyName, itemNames, iconClass) {
+        const itemNumber = String(itemNames.length).padStart(2, "0");
+        const tags = itemNames
           .map((name) => `<span class="tag">${name}</span>`)
           .join("");
-
-        const moreCount = stationNames.length > 8 ? stationNames.length - 8 : 0;
-        const moreTag =
-          moreCount > 0 ? `<span class="tag">+${moreCount} more</span>` : "";
-
         return `
-          <div class="station-card" style="animation-delay: ${index * 0.1}s">
-            <div class="station-card-header">
-              <div class="company-info">
-                <div class="company-name">
-                  <div class="company-icon">
-                    <i class="fas fa-building"></i>
-                  </div>
-                  ${companyName}
-                </div>
+          <div class="station-card">
+            <div class="station-info">
+              <div class="company-name">
+                <span class="company-icon"><i class="${iconClass}"></i></span>
+                <span>${companyName}</span>
               </div>
-              <div class="station-count">${stationNumber}</div>
+              <div class="station-tags">${tags}</div>
             </div>
-            <div class="station-tags">${tags}${moreTag}</div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: ${progressPercentage}%"></div>
-            </div>
+            <div class="station-count">${itemNumber}</div>
           </div>
         `;
       }
@@ -570,25 +558,34 @@
       async function populateDashboard() {
         try {
           const data = await fetchDataJson();
-          const stationsContent = document.getElementById(
+          const stationContent = document.getElementById(
             "railway-stations-content"
           );
 
-          let cardsHTML = "";
-          const grouped = groupByCompany(data.stations);
-          const sortedCompanies = Object.entries(grouped).sort(
+          const groupedStations = groupByCompany(data.stations);
+          const sortedCompanies = Object.entries(groupedStations).sort(
             (a, b) => b[1].length - a[1].length
           );
 
-          sortedCompanies.forEach(([company, stationNames], index) => {
-            cardsHTML += createGroupedStationCard(company, stationNames, index);
+          if (sortedCompanies.length === 0) {
+            stationContent.innerHTML = `<div class="empty-state"><i class="fas fa-times-circle"></i>No station data with company available.</div>`;
+            return;
+          }
+
+          let cardsHTML = "";
+          sortedCompanies.forEach(([company, stationNames]) => {
+            cardsHTML += createGroupedItemCard(
+              company,
+              stationNames,
+              "fas fa-building"
+            );
           });
 
-          stationsContent.innerHTML = cardsHTML;
+          stationContent.innerHTML = cardsHTML;
 
           // Update stats
           const totalStations = data.stations.length;
-          const totalCompanies = Object.keys(grouped).length;
+          const totalCompanies = Object.keys(groupedStations).length;
 
           document.getElementById("total-stations").textContent = totalStations;
           document.getElementById("total-companies").textContent =
@@ -601,49 +598,11 @@
             });
           }, 500);
         } catch (error) {
-          const stationsContent = document.getElementById(
+          console.error("Error populating dashboard:", error);
+          document.getElementById(
             "railway-stations-content"
-          );
-          stationsContent.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p>Error loading station data.</p>
-            </div>
-          `;
+          ).innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i>Failed to load station data.</div>`;
         }
-      }
-
-      function createGroupedCrossGateCard(companyName, gateNames, index) {
-        const gateNumber = String(gateNames.length).padStart(2, "0");
-        const progressPercentage = Math.min((gateNames.length / 15) * 100, 100);
-        const tags = gateNames
-          .slice(0, 8)
-          .map((name) => `<span class="tag">${name}</span>`)
-          .join("");
-
-        const moreCount = gateNames.length > 8 ? gateNames.length - 8 : 0;
-        const moreTag =
-          moreCount > 0 ? `<span class="tag">+${moreCount} more</span>` : "";
-
-        return `
-          <div class="station-card" style="animation-delay: ${index * 0.1}s">
-            <div class="station-card-header">
-              <div class="company-info">
-                <div class="company-name">
-                  <div class="company-icon">
-                    <i class="fas fa-road"></i>
-                  </div>
-                  ${companyName}
-                </div>
-              </div>
-              <div class="station-count">${gateNumber}</div>
-            </div>
-            <div class="station-tags">${tags}${moreTag}</div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: ${progressPercentage}%"></div>
-            </div>
-          </div>
-        `;
       }
 
       async function populateCrossGate() {
@@ -652,21 +611,29 @@
           const crossGateContent =
             document.getElementById("cross-gate-content");
 
-          let cardsHTML = "";
-          const grouped = groupByCompany(data["cross-gates"]);
-          const sortedCompanies = Object.entries(grouped).sort(
+          const groupedCrossGates = groupByCompany(data["cross-gates"]);
+          const sortedCompanies = Object.entries(groupedCrossGates).sort(
             (a, b) => b[1].length - a[1].length
           );
 
-          sortedCompanies.forEach(([company, gateNames], index) => {
-            cardsHTML += createGroupedCrossGateCard(company, gateNames, index);
-          });
+          if (sortedCompanies.length === 0) {
+            crossGateContent.innerHTML = `<div class="empty-state"><i class="fas fa-times-circle"></i>No cross gates with company data available.</div>`;
+            return;
+          }
 
+          let cardsHTML = "";
+          sortedCompanies.forEach(([company, crossGateNames]) => {
+            cardsHTML += createGroupedItemCard(
+              company,
+              crossGateNames,
+              "fas fa-traffic-light"
+            );
+          });
           crossGateContent.innerHTML = cardsHTML;
 
           // Update stats
           const totalGates = data["cross-gates"].length;
-          const totalCompanies = Object.keys(grouped).length;
+          const totalCompanies = Object.keys(groupedCrossGates).length;
 
           document.getElementById("total-gates").textContent = totalGates;
           document.getElementById("gate-companies").textContent =
@@ -679,14 +646,10 @@
             });
           }, 500);
         } catch (error) {
-          const crossGateContent =
-            document.getElementById("cross-gate-content");
-          crossGateContent.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p>Error loading cross gate data.</p>
-            </div>
-          `;
+          console.error("Error populating cross gates:", error);
+          document.getElementById(
+            "cross-gate-content"
+          ).innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i>Failed to load cross gate data.</div>`;
         }
       }
 
