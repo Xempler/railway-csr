@@ -434,50 +434,7 @@
         return map;
       }
 
-      // Function to load custom railway data for Sri Lanka
-      async function loadCustomRailwayData(map) {
-        try {
-          // Try to load custom Sri Lankan railway data if available
-          const response = await fetch("sri-lanka-railways.geojson");
-          if (response.ok) {
-            const railwayData = await response.json();
 
-            const customRailwayLayer = L.geoJSON(railwayData, {
-              style: function (feature) {
-                return {
-                  color: "#ff6b6b",
-                  weight: 4,
-                  opacity: 0.9,
-                  lineCap: "round",
-                };
-              },
-              onEachFeature: function (feature, layer) {
-                let popupContent =
-                  '<div style="font-weight: bold; color: #ff6b6b;">Custom Railway Data</div>';
-                if (feature.properties) {
-                  if (feature.properties.name) {
-                    popupContent += `<br><strong>Name:</strong> ${feature.properties.name}`;
-                  }
-                  if (feature.properties.type) {
-                    popupContent += `<br><strong>Type:</strong> ${feature.properties.type}`;
-                  }
-                  if (feature.properties.status) {
-                    popupContent += `<br><strong>Status:</strong> ${feature.properties.status}`;
-                  }
-                }
-                layer.bindPopup(popupContent);
-              },
-            });
-
-            customRailwayLayer.addTo(map);
-            console.log("Custom railway data loaded successfully");
-          }
-        } catch (error) {
-          console.log(
-            "No custom railway data available, using standard sources"
-          );
-        }
-      }
 
       // Function to load and highlight potentially missing railway lines
       async function loadMissingRailwayLines(map) {
