@@ -513,7 +513,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       async function fetchDataJson() {
-        const response = await fetch("data.json");
+        const response = await fetch("data_1.json");
         if (!response.ok) throw new Error("Failed to load data.json");
         return await response.json();
       }
