@@ -1,0 +1,18 @@
+[
+  {
+    "companyName": "Company Y (PVT) Ltd.",
+    "stationNames": ["Talawa"]
+  },
+  {
+    "companyName": "Company A (PVT) Ltd.",
+    "stationNames": ["Colombo Fort", "Bambalapitiya", "Gampaha"]
+  },
+  {
+    "companyName": "Company B (PVT) Ltd.",
+    "stationNames": ["Kandy"]
+  },
+  {
+    "companyName": "Company C (PVT) Ltd.",
+    "stationNames": ["Matara", "Galle"]
+  }
+]

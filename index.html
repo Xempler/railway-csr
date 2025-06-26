@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="si">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dream Destination - Dashboard & Map</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      :root {
+        --primary-blue: #1a2c56;
+        --light-grey: #f5f6fa;
+        --card-bg: #fff;
+        --search-bg: #f0f2f7;
+        --accent-blue: #009fe3;
+        --border-color: #e0e0e0;
+        --shadow: 0 2px 12px rgba(26, 44, 86, 0.08);
+      }
+      body {
+        margin: 0;
+        font-family: "Roboto", sans-serif;
+        background: var(--light-grey);
+        color: var(--primary-blue);
+      }
+      .top-bg-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 220px;
+        z-index: 0;
+      }
+      .header {
+        background: var(--primary-blue);
+        padding: 18px 32px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+        border-radius: 0 0 18px 18px;
+        box-shadow: var(--shadow);
+      }
+      .header-logo {
+        color: #fff;
+        font-family: "Playfair Display", serif;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 1px;
+        text-shadow: none;
+      }
+      .header-sub {
+        color: #e0e0e0;
+        font-size: 15px;
+        font-weight: 400;
+        margin-top: 4px;
+        letter-spacing: 0.5px;
+      }
+      .dashboard-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 40px;
+        padding: 40px;
+        background: transparent;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 1600px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+      }
+      .dashboard-column {
+        background: var(--card-bg);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        width: 650px;
+        max-width: 100vw;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        overflow: hidden;
+        height: auto;
+      }
+      .dashboard-content {
+        flex: 1 1 auto;
+        overflow-y: visible;
+        padding: 0 24px 24px 24px;
+      }
+      .column-header {
+        font-size: 22px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--primary-blue);
+        margin-bottom: 8px;
+        padding: 24px 24px 0 24px;
+        text-shadow: none;
+      }
+      .column-header .fas {
+        font-size: 26px;
+        color: var(--accent-blue);
+        text-shadow: none;
+      }
+      .station-card {
+        background: var(--search-bg);
+        border-radius: 12px;
+        padding: 20px 18px 18px 18px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+        transition: box-shadow 0.2s, border 0.2s;
+      }
+      .station-card:hover {
+        box-shadow: var(--shadow);
+        border: 1.5px solid var(--accent-blue);
+      }
+      .station-info .fas {
+        margin-right: 8px;
+        color: var(--primary-blue);
+      }
+      .company-name {
+        font-weight: 600;
+        color: var(--primary-blue);
+        font-size: 16px;
+      }
+      .station-tags {
+        margin-top: 10px;
+      }
+      .tag {
+        background: #e9eef6;
+        color: var(--primary-blue);
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-right: 8px;
+        font-weight: 500;
+        box-shadow: none;
+      }
+      .station-number {
+        background: var(--primary-blue);
+        color: #fff;
+        font-weight: 700;
+        font-size: 18px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        min-width: 28px;
+        text-align: center;
+        box-shadow: none;
+      }
+      #map-section {
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+      }
+      .map-wrapper {
+        width: 90vw;
+        height: 90vw;
+        max-width: 1400px;
+        max-height: 700px;
+        margin: 40px auto 40px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow);
+        border-radius: 18px;
+        background: var(--card-bg);
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+        min-height: 400px;
+        background-color: #e9eef6;
+        border-radius: 16px;
+      }
+      .railway-layer {
+        filter: invert(100%) sepia(100%) saturate(1000%) hue-rotate(350deg)
+          brightness(90%) contrast(150%);
+      }
+      @media (max-width: 900px) {
+        .dashboard-container {
+          flex-direction: column;
+          gap: 24px;
+          padding: 20px;
+          align-items: center;
+        }
+        .dashboard-column {
+          width: 98vw;
+          max-width: 98vw;
+          height: auto;
+        }
+        .map-wrapper {
+          margin: 20px auto 20px auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <span class="header-logo">Dream Destination</span>
+      <span class="header-sub"
+        >Modernization of 100 Railway Stations across Sri Lanka</span
+      >
+    </div>
+    <div class="dashboard-container">
+      <div class="dashboard-column" id="railway-stations-column">
+        <div class="column-header">
+          <i class="fas fa-train"></i> Railway Stations
+        </div>
+        <div class="dashboard-content" id="railway-stations-content"></div>
+      </div>
+      <div class="dashboard-column" id="cross-gate-column">
+        <div class="column-header">
+          <i class="fas fa-exchange-alt"></i> Cross Gate
+        </div>
+        <div class="dashboard-content" id="cross-gate-content"></div>
+      </div>
+    </div>
+    <section id="map-section">
+      <div class="map-wrapper">
+        <div id="map"></div>
+      </div>
+    </section>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      function createStationCard(companyData) {
+        const stationNumber = String(companyData.stationNames.length).padStart(
+          2,
+          "0"
+        );
+        const tags = companyData.stationNames
+          .map((name) => `<span class="tag">${name}</span>`)
+          .join("");
+        return `
+          <div class="station-card">
+            <div class="station-info">
+              <div class="company-name"><i class="fas fa-building"></i> ${companyData.companyName}</div>
+              <div class="station-tags">
+                ${tags}
+              </div>
+            </div>
+            <div class="station-number">${stationNumber}</div>
+          </div>
+        `;
+      }
+      async function populateDashboard() {
+        try {
+          const response = await fetch("bought-stations.json");
+          if (!response.ok)
+            throw new Error("Failed to load bought-stations.json");
+          const boughtStations = await response.json();
+          const stationsContent = document.getElementById(
+            "railway-stations-content"
+          );
+          let cardsHTML = "";
+          boughtStations
+            .filter(
+              (company) =>
+                company.stationNames && Array.isArray(company.stationNames)
+            )
+            .sort((a, b) => b.stationNames.length - a.stationNames.length)
+            .forEach((company) => {
+              cardsHTML += createStationCard(company);
+            });
+          stationsContent.innerHTML = cardsHTML;
+        } catch (error) {
+          const stationsContent = document.getElementById(
+            "railway-stations-content"
+          );
+          stationsContent.innerHTML += "<p>Error loading station data.</p>";
+        }
+      }
+      function createCrossGateCard(companyData) {
+        const gateNumber = String(companyData.gateNames.length).padStart(
+          2,
+          "0"
+        );
+        const tags = companyData.gateNames
+          .map((name) => `<span class=\"tag\">${name}</span>`)
+          .join("");
+        return `
+          <div class=\"station-card\">
+            <div class=\"station-info\">
+              <div class=\"company-name\"><i class=\"fas fa-building\"></i> ${companyData.companyName}</div>
+              <div class=\"station-tags\">${tags}</div>
+            </div>
+            <div class=\"station-number\">${gateNumber}</div>
+          </div>
+        `;
+      }
+      async function populateCrossGate() {
+        try {
+          const response = await fetch("cross-gates.json");
+          if (!response.ok) throw new Error("Failed to load cross-gates.json");
+          const crossGates = await response.json();
+          const crossGateContent =
+            document.getElementById("cross-gate-content");
+          let cardsHTML = "";
+          crossGates
+            .filter(
+              (company) => company.gateNames && Array.isArray(company.gateNames)
+            )
+            .sort((a, b) => b.gateNames.length - a.gateNames.length)
+            .forEach((company) => {
+              cardsHTML += createCrossGateCard(company);
+            });
+          crossGateContent.innerHTML = cardsHTML;
+        } catch (error) {
+          const crossGateContent =
+            document.getElementById("cross-gate-content");
+          crossGateContent.innerHTML += "<p>Error loading cross gate data.</p>";
+        }
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        populateDashboard();
+        populateCrossGate();
+        const mapSection = document.getElementById("map-section");
+        const observer = new IntersectionObserver(
+          (entries, obs) => {
+            if (entries[0].isIntersecting) {
+              initializeMap();
+              obs.unobserve(mapSection);
+            }
+          },
+          { threshold: 0.1 }
+        );
+        observer.observe(mapSection);
+      });
+      function initializeMap() {
+        const map = L.map("map", { attributionControl: false }).setView(
+          [7.8, 80.7],
+          8
+        );
+        L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            // attribution: "Tiles &copy; Esri ...",
+          }
+        ).addTo(map);
+        L.tileLayer(
+          "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
+          {
+            maxZoom: 19,
+            minZoom: 8,
+            zIndex: 999,
+            className: "railway-layer",
+            // attribution: ' | Railway data &copy; ...',
+          }
+        ).addTo(map);
+        loadAndMarkStations(map);
+      }
+      function loadAndMarkStations(map) {
+        Promise.all([
+          fetch("Station-list.json").then((res) =>
+            res.ok
+              ? res.json()
+              : Promise.reject("Failed to load Station-list.json")
+          ),
+          fetch("bought-stations.json").then((res) =>
+            res.ok
+              ? res.json()
+              : Promise.reject("Failed to load bought-stations.json")
+          ),
+        ])
+          .then(([stationList, boughtStationsList]) => {
+            const allowedNames = new Set(stationList.map((s) => s.name.trim()));
+            const boughtStations = {};
+            boughtStationsList.forEach((company) => {
+              if (company.stationNames && Array.isArray(company.stationNames)) {
+                company.stationNames.forEach((name) => {
+                  boughtStations[name.trim()] = company.companyName;
+                });
+              }
+            });
+            const overpassUrl = "https://overpass-api.de/api/interpreter";
+            const query = `[out:json][timeout:60];area["ISO3166-1"="LK"]->.a;(node["railway"="station"](area.a);way["railway"="station"](area.a);relation["railway"="station"](area.a););out center;`;
+            const whiteDotIcon = L.divIcon({
+              className: "dot-white",
+              html: '<div style="background-color: white; width: 8px; height: 8px; border-radius: 50%; border: 1px solid #333;"></div>',
+              iconSize: [8, 8],
+            });
+            const redDotIcon = L.divIcon({
+              className: "dot-red-bought",
+              html: '<div style="background-color: #d33; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 5px #d33;"></div>',
+              iconSize: [10, 10],
+            });
+            fetch(overpassUrl, {
+              method: "POST",
+              body: new URLSearchParams({ data: query }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                data.elements.forEach((element) => {
+                  const name =
+                    element.tags && element.tags.name
+                      ? element.tags.name.trim()
+                      : "";
+                  if (allowedNames.has(name)) {
+                    const lat =
+                      element.type === "node"
+                        ? element.lat
+                        : element.center.lat;
+                    const lon =
+                      element.type === "node"
+                        ? element.lon
+                        : element.center.lon;
+                    if (lat && lon) {
+                      const company = boughtStations[name];
+                      const marker = L.marker([lat, lon], {
+                        icon: company ? redDotIcon : whiteDotIcon,
+                      });
+                      marker.bindTooltip(
+                        company ? `<b>${name}</b><br>Company: ${company}` : name
+                      );
+                      marker.addTo(map);
+                    }
+                  }
+                });
+              })
+              .catch((error) =>
+                console.error("Error fetching Overpass API data:", error)
+              );
+          })
+          .catch((err) =>
+            console.error("Error loading local JSON files:", err)
+          );
+      }
+    </script>
+  </body>
+</html>
