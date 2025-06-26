@@ -238,44 +238,53 @@
     </section>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-      function createStationCard(companyData) {
-        const stationNumber = String(companyData.stationNames.length).padStart(
-          2,
-          "0"
-        );
-        const tags = companyData.stationNames
+      async function fetchDataJson() {
+        const response = await fetch("data.json");
+        if (!response.ok) throw new Error("Failed to load data.json");
+        return await response.json();
+      }
+
+      function groupByCompany(items) {
+        const companyMap = {};
+        items.forEach((item) => {
+          if (item.company) {
+            if (!companyMap[item.company]) {
+              companyMap[item.company] = [];
+            }
+            companyMap[item.company].push(item.name);
+          }
+        });
+        return companyMap;
+      }
+
+      function createGroupedStationCard(companyName, stationNames) {
+        const stationNumber = String(stationNames.length).padStart(2, "0");
+        const tags = stationNames
           .map((name) => `<span class="tag">${name}</span>`)
           .join("");
         return `
           <div class="station-card">
             <div class="station-info">
-              <div class="company-name"><i class="fas fa-building"></i> ${companyData.companyName}</div>
-              <div class="station-tags">
-                ${tags}
-              </div>
+              <div class="company-name"><i class="fas fa-building"></i> ${companyName}</div>
+              <div class="station-tags">${tags}</div>
             </div>
             <div class="station-number">${stationNumber}</div>
           </div>
         `;
       }
+
       async function populateDashboard() {
         try {
-          const response = await fetch("bought-stations.json");
-          if (!response.ok)
-            throw new Error("Failed to load bought-stations.json");
-          const boughtStations = await response.json();
+          const data = await fetchDataJson();
           const stationsContent = document.getElementById(
             "railway-stations-content"
           );
           let cardsHTML = "";
-          boughtStations
-            .filter(
-              (company) =>
-                company.stationNames && Array.isArray(company.stationNames)
-            )
-            .sort((a, b) => b.stationNames.length - a.stationNames.length)
-            .forEach((company) => {
-              cardsHTML += createStationCard(company);
+          const grouped = groupByCompany(data.stations);
+          Object.entries(grouped)
+            .sort((a, b) => b[1].length - a[1].length)
+            .forEach(([company, stationNames]) => {
+              cardsHTML += createGroupedStationCard(company, stationNames);
             });
           stationsContent.innerHTML = cardsHTML;
         } catch (error) {
@@ -285,39 +294,27 @@
           stationsContent.innerHTML += "<p>Error loading station data.</p>";
         }
       }
-      function createCrossGateCard(companyData) {
-        const gateNumber = String(companyData.gateNames.length).padStart(
-          2,
-          "0"
-        );
-        const tags = companyData.gateNames
+
+      function createGroupedCrossGateCard(companyName, gateNames) {
+        const gateNumber = String(gateNames.length).padStart(2, "0");
+        const tags = gateNames
           .map((name) => `<span class=\"tag\">${name}</span>`)
           .join("");
         return `
-          <div class=\"station-card\">
-            <div class=\"station-info\">
-              <div class=\"company-name\"><i class=\"fas fa-building\"></i> ${companyData.companyName}</div>
-              <div class=\"station-tags\">${tags}</div>
-            </div>
-            <div class=\"station-number\">${gateNumber}</div>
-          </div>
-        `;
+          <div class=\"station-card\">\n            <div class=\"station-info\">\n              <div class=\"company-name\"><i class=\"fas fa-building\"></i> ${companyName}</div>\n              <div class=\"station-tags\">${tags}</div>\n            </div>\n            <div class=\"station-number\">${gateNumber}</div>\n          </div>\n        `;
       }
+
       async function populateCrossGate() {
         try {
-          const response = await fetch("cross-gates.json");
-          if (!response.ok) throw new Error("Failed to load cross-gates.json");
-          const crossGates = await response.json();
+          const data = await fetchDataJson();
           const crossGateContent =
             document.getElementById("cross-gate-content");
           let cardsHTML = "";
-          crossGates
-            .filter(
-              (company) => company.gateNames && Array.isArray(company.gateNames)
-            )
-            .sort((a, b) => b.gateNames.length - a.gateNames.length)
-            .forEach((company) => {
-              cardsHTML += createCrossGateCard(company);
+          const grouped = groupByCompany(data["cross-gates"]);
+          Object.entries(grouped)
+            .sort((a, b) => b[1].length - a[1].length)
+            .forEach(([company, gateNames]) => {
+              cardsHTML += createGroupedCrossGateCard(company, gateNames);
             });
           crossGateContent.innerHTML = cardsHTML;
         } catch (error) {
@@ -326,69 +323,28 @@
           crossGateContent.innerHTML += "<p>Error loading cross gate data.</p>";
         }
       }
-      document.addEventListener("DOMContentLoaded", () => {
-        populateDashboard();
-        populateCrossGate();
-        const mapSection = document.getElementById("map-section");
-        const observer = new IntersectionObserver(
-          (entries, obs) => {
-            if (entries[0].isIntersecting) {
-              initializeMap();
-              obs.unobserve(mapSection);
-            }
-          },
-          { threshold: 0.1 }
-        );
-        observer.observe(mapSection);
-      });
-      function initializeMap() {
-        const map = L.map("map", { attributionControl: false }).setView(
-          [7.8, 80.7],
-          8
-        );
-        L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          {
-            // attribution: "Tiles &copy; Esri ...",
+
+      function getStationCompanyMap(stations) {
+        const map = {};
+        stations.forEach((station) => {
+          if (station.company) {
+            map[station.name.trim()] = station.company;
           }
-        ).addTo(map);
-        L.tileLayer(
-          "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
-          {
-            maxZoom: 19,
-            minZoom: 8,
-            zIndex: 999,
-            className: "railway-layer",
-            // attribution: ' | Railway data &copy; ...',
-          }
-        ).addTo(map);
-        loadAndMarkStations(map);
+        });
+        return map;
       }
+
+      function getStationNamesSet(stations) {
+        return new Set(stations.map((s) => s.name.trim()));
+      }
+
       function loadAndMarkStations(map) {
-        Promise.all([
-          fetch("Station-list.json").then((res) =>
-            res.ok
-              ? res.json()
-              : Promise.reject("Failed to load Station-list.json")
-          ),
-          fetch("bought-stations.json").then((res) =>
-            res.ok
-              ? res.json()
-              : Promise.reject("Failed to load bought-stations.json")
-          ),
-        ])
-          .then(([stationList, boughtStationsList]) => {
-            const allowedNames = new Set(stationList.map((s) => s.name.trim()));
-            const boughtStations = {};
-            boughtStationsList.forEach((company) => {
-              if (company.stationNames && Array.isArray(company.stationNames)) {
-                company.stationNames.forEach((name) => {
-                  boughtStations[name.trim()] = company.companyName;
-                });
-              }
-            });
+        fetchDataJson()
+          .then((data) => {
+            const allowedNames = getStationNamesSet(data.stations);
+            const companyMap = getStationCompanyMap(data.stations);
             const overpassUrl = "https://overpass-api.de/api/interpreter";
-            const query = `[out:json][timeout:60];area["ISO3166-1"="LK"]->.a;(node["railway"="station"](area.a);way["railway"="station"](area.a);relation["railway"="station"](area.a););out center;`;
+            const query = `[out:json][timeout:60];area[\"ISO3166-1\"=\"LK\"]->.a;(node[\"railway\"=\"station\"](area.a);way[\"railway\"=\"station\"](area.a);relation[\"railway\"=\"station\"](area.a););out center;`;
             const whiteDotIcon = L.divIcon({
               className: "dot-white",
               html: '<div style="background-color: white; width: 8px; height: 8px; border-radius: 50%; border: 1px solid #333;"></div>',
@@ -404,8 +360,8 @@
               body: new URLSearchParams({ data: query }),
             })
               .then((response) => response.json())
-              .then((data) => {
-                data.elements.forEach((element) => {
+              .then((dataOSM) => {
+                dataOSM.elements.forEach((element) => {
                   const name =
                     element.tags && element.tags.name
                       ? element.tags.name.trim()
@@ -420,7 +376,7 @@
                         ? element.lon
                         : element.center.lon;
                     if (lat && lon) {
-                      const company = boughtStations[name];
+                      const company = companyMap[name];
                       const marker = L.marker([lat, lon], {
                         icon: company ? redDotIcon : whiteDotIcon,
                       });
@@ -436,9 +392,231 @@
                 console.error("Error fetching Overpass API data:", error)
               );
           })
-          .catch((err) =>
-            console.error("Error loading local JSON files:", err)
+          .catch((err) => console.error("Error loading data.json file:", err));
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        populateDashboard();
+        populateCrossGate();
+        const mapSection = document.getElementById("map-section");
+        const observer = new IntersectionObserver(
+          (entries, obs) => {
+            if (entries[0].isIntersecting) {
+              initializeMap();
+              obs.unobserve(mapSection);
+            }
+          },
+          { threshold: 0.1 }
+        );
+        observer.observe(mapSection);
+      });
+
+      function initializeMap() {
+        const map = L.map("map", { attributionControl: false }).setView(
+          [7.8, 80.7],
+          8
+        );
+
+        // Base layer
+        const satelliteLayer = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            attribution: "Tiles &copy; Esri",
+          }
+        ).addTo(map);
+
+        // Load detailed railway lines
+        loadMissingRailwayLines(map);
+
+        // Load and mark stations
+        loadAndMarkStations(map);
+
+        return map;
+      }
+
+      // Function to load custom railway data for Sri Lanka
+      async function loadCustomRailwayData(map) {
+        try {
+          // Try to load custom Sri Lankan railway data if available
+          const response = await fetch("sri-lanka-railways.geojson");
+          if (response.ok) {
+            const railwayData = await response.json();
+
+            const customRailwayLayer = L.geoJSON(railwayData, {
+              style: function (feature) {
+                return {
+                  color: "#ff6b6b",
+                  weight: 4,
+                  opacity: 0.9,
+                  lineCap: "round",
+                };
+              },
+              onEachFeature: function (feature, layer) {
+                let popupContent =
+                  '<div style="font-weight: bold; color: #ff6b6b;">Custom Railway Data</div>';
+                if (feature.properties) {
+                  if (feature.properties.name) {
+                    popupContent += `<br><strong>Name:</strong> ${feature.properties.name}`;
+                  }
+                  if (feature.properties.type) {
+                    popupContent += `<br><strong>Type:</strong> ${feature.properties.type}`;
+                  }
+                  if (feature.properties.status) {
+                    popupContent += `<br><strong>Status:</strong> ${feature.properties.status}`;
+                  }
+                }
+                layer.bindPopup(popupContent);
+              },
+            });
+
+            customRailwayLayer.addTo(map);
+            console.log("Custom railway data loaded successfully");
+          }
+        } catch (error) {
+          console.log(
+            "No custom railway data available, using standard sources"
           );
+        }
+      }
+
+      // Function to load and highlight potentially missing railway lines
+      async function loadMissingRailwayLines(map) {
+        try {
+          // Query Overpass API for railway infrastructure in Sri Lanka
+          const overpassUrl = "https://overpass-api.de/api/interpreter";
+          const railwayQuery = `
+            [out:json][timeout:90];
+            area["ISO3166-1"="LK"]->.searchArea;
+            (
+              way["railway"~"^(rail|light_rail|subway|narrow_gauge|monorail)$"](area.searchArea);
+            );
+            out geom;
+          `;
+
+          const response = await fetch(overpassUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `data=${encodeURIComponent(railwayQuery)}`,
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+
+            if (data.elements && data.elements.length > 0) {
+              const railwayFeatures = data.elements
+                .map((element) => {
+                  if (element.geometry) {
+                    return {
+                      type: "Feature",
+                      properties: {
+                        railway: element.tags?.railway || "unknown",
+                        name: element.tags?.name || "Unnamed",
+                        status: getRailwayStatus(element.tags?.railway),
+                        operator: element.tags?.operator || "Unknown",
+                        gauge: element.tags?.gauge || "Unknown",
+                        electrified: element.tags?.electrified || "Unknown",
+                      },
+                      geometry: {
+                        type: "LineString",
+                        coordinates: element.geometry.map((coord) => [
+                          coord.lon,
+                          coord.lat,
+                        ]),
+                      },
+                    };
+                  }
+                  return null;
+                })
+                .filter(Boolean);
+
+              const railwayGeoJSON = {
+                type: "FeatureCollection",
+                features: railwayFeatures,
+              };
+
+              const detailedRailwayLayer = L.geoJSON(railwayGeoJSON, {
+                style: function (feature) {
+                  return {
+                    color: "#2ecc71",
+                    weight: 3,
+                    opacity: 0.8,
+                  };
+                },
+                onEachFeature: function (feature, layer) {
+                  const props = feature.properties;
+                  const popupContent = `
+                    <div style="min-width: 200px;">
+                      <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50;">
+                        🚂 ${props.name}
+                      </div>
+                      <div style="margin-bottom: 4px;"><strong>Type:</strong> ${props.railway}</div>
+                      <div style="margin-bottom: 4px;"><strong>Operator:</strong> ${props.operator}</div>
+                      <div style="margin-bottom: 4px;"><strong>Gauge:</strong> ${props.gauge}</div>
+                      <div style="margin-bottom: 4px;"><strong>Electrified:</strong> ${props.electrified}</div>
+                    </div>
+                  `;
+                  layer.bindPopup(popupContent);
+
+                  // Add hover effect
+                  layer.on("mouseover", function (e) {
+                    layer.setStyle({
+                      weight: 5,
+                      opacity: 0.9,
+                    });
+                  });
+
+                  layer.on("mouseout", function (e) {
+                    detailedRailwayLayer.resetStyle(layer);
+                  });
+                },
+              });
+
+              detailedRailwayLayer.addTo(map);
+
+              console.log(
+                `Loaded ${railwayFeatures.length} railway features from OpenStreetMap`
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Error loading detailed railway data:", error);
+        }
+      }
+
+      // Helper function to determine railway status
+      function getRailwayStatus(railwayTag) {
+        switch (railwayTag) {
+          case "rail":
+          case "light_rail":
+          case "subway":
+          case "narrow_gauge":
+          case "monorail":
+            return "active";
+          case "construction":
+            return "construction";
+          case "proposed":
+            return "proposed";
+          case "disused":
+            return "disused";
+          case "abandoned":
+            return "abandoned";
+          default:
+            return "unknown";
+        }
+      }
+
+      // Helper function to get status color
+      function getStatusColor(status) {
+        const colors = {
+          active: "#2ecc71",
+          construction: "#f39c12",
+          proposed: "#9b59b6",
+          disused: "#95a5a6",
+          abandoned: "#e74c3c",
+        };
+        return colors[status] || "#34495e";
       }
     </script>
   </body>
