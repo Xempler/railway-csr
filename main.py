@@ -66,11 +66,11 @@ async def shutdown_event():
 
 # Mount static files directory for images and other assets
 if os.path.exists("img"):
-    app.mount("/img", StaticFiles(directory="img"), name="img")
+    app.mount("/leaderboard/img", StaticFiles(directory="img"), name="img")
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/leaderboard", response_class=HTMLResponse)
 async def read_root():
-    """Serve the main index.html file at the root URL"""
+    """Serve the main index.html file at the leaderboard URL"""
     try:
         with open("index.html", "r", encoding="utf-8") as file:
             content = file.read()
@@ -78,13 +78,12 @@ async def read_root():
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Error: index.html not found</h1>", status_code=404)
 
-@app.get("/data.json")
+@app.get("/leaderboard/data.json")
 async def get_data():
     """Serve the data.json file"""
     return FileResponse("data.json", media_type="application/json")
 
-
-@app.get("/data_1.json")
+@app.get("/leaderboard/data_1.json")
 async def get_data_1():
     """Fetch data from PostgreSQL database and enrich data.json with status and company"""
     if not db_pool:
@@ -241,8 +240,7 @@ async def get_data_1():
         logger.error(f"Error enriching data: {e}")
         raise HTTPException(status_code=500, detail=f"Error enriching data: {str(e)}")
 
-
-@app.get("/health")
+@app.get("/leaderboard/health")
 async def health_check():
     """Health check endpoint"""
     db_status = "connected" if db_pool else "disconnected"
