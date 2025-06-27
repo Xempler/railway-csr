@@ -259,11 +259,23 @@
         color: #fff;
         font-weight: 700;
         font-size: 16px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        min-width: 28px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        min-width: 36px;
         text-align: center;
         box-shadow: var(--shadow);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+      }
+
+      .station-count.large-count {
+        font-size: 14px;
+        padding: 8px 12px;
+        min-width: 42px;
+        border-radius: 12px;
       }
 
       .station-tags {
@@ -272,6 +284,21 @@
         gap: 0.5rem;
         margin-top: 0.5rem;
         margin-right: 0;
+        max-height: 120px;
+        overflow-y: auto;
+      }
+
+      .station-tags::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .station-tags::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .station-tags::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 2px;
       }
 
       .tag {
@@ -449,6 +476,18 @@
           font-size: 11px;
           padding: 4px 8px;
         }
+
+        .station-count {
+          font-size: 14px;
+          padding: 8px 10px;
+          min-width: 32px;
+        }
+
+        .station-count.large-count {
+          font-size: 12px;
+          padding: 6px 8px;
+          min-width: 36px;
+        }
       }
 
       /* Custom tooltip styling */
@@ -550,7 +589,8 @@
       }
 
       function createGroupedItemCard(companyName, itemNames, iconClass) {
-        const itemNumber = String(itemNames.length).padStart(2, "0");
+        const count = itemNames.length;
+        const itemNumber = count < 100 ? String(count).padStart(2, "0") : String(count);
         const tags = itemNames
           .map((name) => `<span class="tag">${name}</span>`)
           .join("");
@@ -563,7 +603,7 @@
               </div>
               <div class="station-tags">${tags}</div>
             </div>
-            <div class="station-count">${itemNumber}</div>
+            <div class="station-count ${count >= 100 ? 'large-count' : ''}">${itemNumber}</div>
           </div>
         `;
       }
@@ -580,6 +620,14 @@
             (a, b) => b[1].length - a[1].length
           );
 
+          // Update stats first (always execute regardless of company data)
+          const totalStations = data.stations.length;
+          const totalCompanies = Object.keys(groupedStations).length;
+
+          document.getElementById("total-stations").textContent = totalStations;
+          document.getElementById("total-companies").textContent =
+            totalCompanies;
+
           if (sortedCompanies.length === 0) {
             stationContent.innerHTML = `<div class="empty-state"><i class="fas fa-times-circle"></i>No station data with company available.</div>`;
             return;
@@ -595,14 +643,6 @@
           });
 
           stationContent.innerHTML = cardsHTML;
-
-          // Update stats
-          const totalStations = data.stations.length;
-          const totalCompanies = Object.keys(groupedStations).length;
-
-          document.getElementById("total-stations").textContent = totalStations;
-          document.getElementById("total-companies").textContent =
-            totalCompanies;
 
           // Animate progress bars
           setTimeout(() => {
@@ -629,6 +669,14 @@
             (a, b) => b[1].length - a[1].length
           );
 
+          // Update stats first (always execute regardless of company data)
+          const totalGates = data["cross-gates"].length;
+          const totalCompanies = Object.keys(groupedCrossGates).length;
+
+          document.getElementById("total-gates").textContent = totalGates;
+          document.getElementById("gate-companies").textContent =
+            totalCompanies;
+
           if (sortedCompanies.length === 0) {
             crossGateContent.innerHTML = `<div class="empty-state"><i class="fas fa-times-circle"></i>No cross gates with company data available.</div>`;
             return;
@@ -643,14 +691,6 @@
             );
           });
           crossGateContent.innerHTML = cardsHTML;
-
-          // Update stats
-          const totalGates = data["cross-gates"].length;
-          const totalCompanies = Object.keys(groupedCrossGates).length;
-
-          document.getElementById("total-gates").textContent = totalGates;
-          document.getElementById("gate-companies").textContent =
-            totalCompanies;
 
           // Animate progress bars
           setTimeout(() => {
